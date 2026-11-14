@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Received | QuoteTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="card">
+        <h1>Request received</h1>
+        <p>Thanks. We'll review your request and contact you soon.</p>
+        <a href="{{ url_for('request_form') }}">Submit another request</a>
+    </main>
+</body>
+</html>
