@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request #{{ r['id'] }} | QuoteTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="card">
+        <a href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a>
+        <h1>Request #{{ r['id'] }}</h1>
+
+        {% if saved %}
+        <p class="success">Changes saved.</p>
+        {% endif %}
+
+        <p><strong>Customer:</strong> {{ r['name'] }}</p>
+        <p><strong>Email:</strong> {{ r['email'] }}</p>
+        <p><strong>Phone:</strong> {{ r['phone'] or 'Not provided' }}</p>
+        <p><strong>Service:</strong> {{ r['service_type'] }}</p>
+        <p><strong>Submitted:</strong> {{ r['created_at'][:10] }}</p>
+        <p><strong>Description:</strong><br>{{ r['description'] }}</p>
+
+        <form method="POST" action="{{ url_for('request_detail', request_id=r['id']) }}">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                {% for s in statuses %}
+                <option value="{{ s }}" {% if s == r['status'] %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="5">{{ r['notes'] or '' }}</textarea>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </main>
+</body>
+</html>
