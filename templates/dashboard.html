@@ -30,6 +30,7 @@
                         <th>Service</th>
                         <th>Status</th>
                         <th>Submitted</th>
+                        <th>Follow-up date</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -40,6 +41,13 @@
                         <td>{{ row['service_type'] }}</td>
                         <td>{{ row['status'] }}</td>
                         <td>{{ row['created_at'][:10] }}</td>
+                        <td>
+                            {% if row['follow_up_date'] %}
+                            <time datetime="{{ row['follow_up_date'] }}">{{ row['follow_up_date'] }}</time>
+                            {% else %}
+                            &mdash;
+                            {% endif %}
+                        </td>
                         <td><a href="{{ url_for('request_detail', request_id=row['id']) }}">View</a></td>
                     </tr>
                     {% endfor %}

@@ -26,12 +26,22 @@
             <label for="status">Status</label>
             <select id="status" name="status">
                 {% for s in statuses %}
-                <option value="{{ s }}" {% if s == r['status'] %}selected{% endif %}>{{ s }}</option>
+                <option value="{{ s }}" {% if s == form.get('status', r['status']) %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
 
             <label for="notes">Notes</label>
-            <textarea id="notes" name="notes" rows="5">{{ r['notes'] or '' }}</textarea>
+            <textarea id="notes" name="notes" rows="5">{{ form.get('notes', r['notes'] or '') }}</textarea>
+
+            <label for="follow_up_date">Follow-up date (optional)</label>
+            <input type="date" id="follow_up_date" name="follow_up_date"
+                   value="{{ form.get('follow_up_date', r['follow_up_date'] or '') }}"
+                   {% if error %}aria-invalid="true" aria-describedby="follow-up-error"{% endif %}>
+            {% if error %}
+            <ul class="errors" id="follow-up-error" role="alert">
+                <li>{{ error }}</li>
+            </ul>
+            {% endif %}
 
             <button type="submit">Save Changes</button>
         </form>

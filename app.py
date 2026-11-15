@@ -1,5 +1,8 @@
 import re
 import sqlite3
+from contextlib import closing
+from datetime import date
+
 from flask import Flask, render_template, request, redirect, url_for, abort
 
 app = Flask(__name__)
@@ -31,6 +34,13 @@ def validate_request(form):
     if len(description) < 10:
         errors.append("Please describe the job in at least 10 characters.")
     return errors
+
+
+def valid_follow_up_date(value):
+    try:
+        return date.fromisoformat(value).isoformat() == value
+    except ValueError:
+        return False
 
 
 @app.route("/")
@@ -84,7 +94,7 @@ def dashboard():
 
     query = """
         SELECT requests.id, requests.service_type, requests.status, requests.created_at,
-               customers.name, customers.email
+               requests.follow_up_date, customers.name, customers.email
         FROM requests
         JOIN customers ON customers.id = requests.customer_id
         WHERE 1 = 1
@@ -107,37 +117,61 @@ def dashboard():
 
 @app.route("/requests/<int:request_id>", methods=["GET", "POST"])
 def request_detail(request_id):
-    conn = get_db()
+    error = None
+    with closing(get_db()) as conn:
+        if request.method == "POST":
+            new_status = request.form.get("status", "")
+            notes = request.form.get("notes", "").strip()
+            follow_up_date = request.form.get("follow_up_date")
+            if new_status not in STATUSES:
+                abort(400)
+            if follow_up_date and not valid_follow_up_date(follow_up_date):
+                error = "Enter a valid follow-up date in YYYY-MM-DD format."
+            else:
+                with conn:
+                    # Older forms omit the date. An empty date field clears it.
+                    updated = conn.execute(
+                        """
+                        UPDATE requests
+                        SET status = :status, notes = :notes,
+                            follow_up_date = CASE
+                                WHEN :follow_up_date IS NULL THEN follow_up_date
+                                ELSE NULLIF(:follow_up_date, '')
+                            END
+                        WHERE id = :request_id
+                        """,
+                        {
+                            "status": new_status,
+                            "notes": notes,
+                            "follow_up_date": follow_up_date,
+                            "request_id": request_id,
+                        },
+                    )
+                    if updated.rowcount == 0:
+                        abort(404)
+                return redirect(url_for("request_detail", request_id=request_id, saved=1))
 
-    if request.method == "POST":
-        new_status = request.form.get("status", "")
-        notes = request.form.get("notes", "").strip()
-        if new_status not in STATUSES:
-            conn.close()
-            abort(400)
-        conn.execute(
-            "UPDATE requests SET status = ?, notes = ? WHERE id = ?",
-            (new_status, notes, request_id),
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for("request_detail", request_id=request_id, saved=1))
-
-    row = conn.execute(
-        """
-        SELECT requests.*, customers.name, customers.email, customers.phone
-        FROM requests
-        JOIN customers ON customers.id = requests.customer_id
-        WHERE requests.id = ?
-        """,
-        (request_id,),
-    ).fetchone()
-    conn.close()
+        row = conn.execute(
+            """
+            SELECT requests.*, customers.name, customers.email, customers.phone
+            FROM requests
+            JOIN customers ON customers.id = requests.customer_id
+            WHERE requests.id = ?
+            """,
+            (request_id,),
+        ).fetchone()
 
     if row is None:
         abort(404)
 
-    return render_template("request_detail.html", r=row, statuses=STATUSES, saved=request.args.get("saved"))
+    return render_template(
+        "request_detail.html",
+        r=row,
+        statuses=STATUSES,
+        form=request.form,
+        error=error,
+        saved=request.method == "GET" and request.args.get("saved"),
+    ), 400 if error else 200
 
 
 if __name__ == "__main__":
