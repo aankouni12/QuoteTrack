@@ -13,6 +13,7 @@ app.secret_key = os.environ.get("QUOTETRACK_SECRET_KEY", "dev-only-change-me")
 DATABASE = "quotetrack.db"
 SERVICE_TYPES = ["Cleaning", "Handyman", "Maintenance", "Other"]
 STATUSES = ["New", "Contacted", "Estimate Sent", "Won", "Lost"]
+CLOSED_STATUSES = ["Won", "Lost"]
 
 
 def get_db():
@@ -54,6 +55,11 @@ def validate_request(form):
     if len(description) < 10:
         errors.append("Please describe the job in at least 10 characters.")
     return errors
+
+
+def today():
+    # Wrapped in a function so tests can set a fixed date
+    return date.today()
 
 
 def valid_follow_up_date(value):
@@ -162,11 +168,33 @@ def dashboard():
         params.append(status)
     query += " ORDER BY requests.created_at DESC"
 
-    conn = get_db()
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
+    today_str = today().isoformat()
+    with closing(get_db()) as conn:
+        rows = conn.execute(query, params).fetchall()
+        # Open requests whose follow-up date is today or already passed
+        due = conn.execute(
+            """
+            SELECT requests.id, requests.service_type, requests.status, requests.follow_up_date,
+                   customers.name, customers.email, customers.phone
+            FROM requests
+            JOIN customers ON customers.id = requests.customer_id
+            WHERE requests.follow_up_date IS NOT NULL
+              AND requests.follow_up_date <= ?
+              AND requests.status NOT IN (?, ?)
+            ORDER BY requests.follow_up_date ASC, requests.id ASC
+            """,
+            (today_str, *CLOSED_STATUSES),
+        ).fetchall()
 
-    return render_template("dashboard.html", rows=rows, statuses=STATUSES, search=search, status=status)
+    return render_template(
+        "dashboard.html",
+        rows=rows,
+        due=due,
+        today=today_str,
+        statuses=STATUSES,
+        search=search,
+        status=status,
+    )
 
 
 @app.route("/requests/<int:request_id>", methods=["GET", "POST"])

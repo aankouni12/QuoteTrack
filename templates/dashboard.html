@@ -16,6 +16,48 @@
             </form>
         </div>
 
+        <section class="due">
+            <h2>Due for follow-up</h2>
+            {% if due %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Contact</th>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Follow-up date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in due %}
+                        <tr>
+                            <td>{{ row['name'] }}</td>
+                            <td>{{ row['phone'] or row['email'] }}</td>
+                            <td>{{ row['service_type'] }}</td>
+                            <td>{{ row['status'] }}</td>
+                            <td>
+                                <time datetime="{{ row['follow_up_date'] }}">{{ row['follow_up_date'] }}</time>
+                                {% if row['follow_up_date'] < today %}
+                                <span class="badge overdue">Overdue</span>
+                                {% else %}
+                                <span class="badge due-today">Today</span>
+                                {% endif %}
+                            </td>
+                            <td><a href="{{ url_for('request_detail', request_id=row['id']) }}">View</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="muted">No customers need to be contacted today.</p>
+            {% endif %}
+        </section>
+
+        <h2>All requests</h2>
         <form method="GET" action="{{ url_for('dashboard') }}" class="filters">
             <input type="text" name="q" placeholder="Search name or email" value="{{ search }}">
             <select name="status">

@@ -110,3 +110,29 @@ button.secondary {
 }
 
 button.secondary:hover { background: #eef5f8; }
+
+.due {
+    background: #fff8e6;
+    border: 1px solid #f0d68a;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.due h2 { margin-top: 0; }
+
+h2 { font-size: 1.2rem; }
+
+.muted { color: #616e7c; margin: 0; }
+
+.badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge.overdue { background: #fdecea; color: #9b1c1c; }
+.badge.due-today { background: #e6f0f5; color: #17607f; }
