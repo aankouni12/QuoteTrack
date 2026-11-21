@@ -1,11 +1,15 @@
+import os
 import re
 import sqlite3
 from contextlib import closing
 from datetime import date
+from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, session
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("QUOTETRACK_SECRET_KEY", "dev-only-change-me")
 DATABASE = "quotetrack.db"
 SERVICE_TYPES = ["Cleaning", "Handyman", "Maintenance", "Other"]
 STATUSES = ["New", "Contacted", "Estimate Sent", "Won", "Lost"]
@@ -16,6 +20,22 @@ def get_db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if "owner_id" not in session:
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def safe_next(target):
+    # Only allow redirects to pages on this site
+    if target and target.startswith("/") and not target.startswith("//"):
+        return target
+    return url_for("dashboard")
 
 
 def validate_request(form):
@@ -87,7 +107,41 @@ def confirmation():
     return render_template("confirmation.html")
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if "owner_id" in session:
+        return redirect(url_for("dashboard"))
+
+    next_page = request.values.get("next", "")
+    if request.method == "GET":
+        return render_template("login.html", error=None, username="", next_page=next_page)
+
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+
+    with closing(get_db()) as conn:
+        owner = conn.execute(
+            "SELECT id, password_hash FROM owners WHERE username = ?", (username,)
+        ).fetchone()
+
+    if owner is None or not check_password_hash(owner["password_hash"], password):
+        error = "Invalid username or password."
+        return render_template("login.html", error=error, username=username, next_page=next_page), 401
+
+    session.clear()
+    session["owner_id"] = owner["id"]
+    session["username"] = username
+    return redirect(safe_next(next_page))
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/dashboard")
+@login_required
 def dashboard():
     search = request.args.get("q", "").strip()
     status = request.args.get("status", "")
@@ -116,6 +170,7 @@ def dashboard():
 
 
 @app.route("/requests/<int:request_id>", methods=["GET", "POST"])
+@login_required
 def request_detail(request_id):
     error = None
     with closing(get_db()) as conn:

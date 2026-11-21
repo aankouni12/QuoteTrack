@@ -5,6 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from werkzeug.security import generate_password_hash
+
 import app as quotetrack
 
 SCHEMA = Path(__file__).resolve().parents[1] / "schema.sql"
@@ -20,7 +22,13 @@ class RequestWorkflowTests(unittest.TestCase):
         self.addCleanup(database_override.stop)
         with closing(sqlite3.connect(database)) as connection:
             connection.executescript(SCHEMA.read_text())
+            connection.execute(
+                "INSERT INTO owners (username, password_hash) VALUES (?, ?)",
+                ("owner", generate_password_hash("correct-password")),
+            )
+            connection.commit()
         self.client = quotetrack.app.test_client()
+        self.client.post("/login", data={"username": "owner", "password": "correct-password"})
 
     def submit_request(self, **overrides):
         details = {

@@ -8,7 +8,13 @@
 </head>
 <body>
     <main class="card wide">
-        <h1>Customer Requests</h1>
+        <div class="topbar">
+            <h1>Customer Requests</h1>
+            <form method="POST" action="{{ url_for('logout') }}">
+                <span class="signed-in">Signed in as {{ session['username'] }}</span>
+                <button type="submit" class="secondary">Log out</button>
+            </form>
+        </div>
 
         <form method="GET" action="{{ url_for('dashboard') }}" class="filters">
             <input type="text" name="q" placeholder="Search name or email" value="{{ search }}">

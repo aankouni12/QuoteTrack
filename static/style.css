@@ -86,3 +86,27 @@ th, td {
 }
 
 small { color: #616e7c; }
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.topbar h1 { margin: 0; }
+
+.signed-in { color: #616e7c; margin-right: 10px; }
+
+button.secondary {
+    width: auto;
+    margin-top: 0;
+    padding: 8px 16px;
+    background: #fff;
+    color: #17607f;
+    border: 1px solid #17607f;
+}
+
+button.secondary:hover { background: #eef5f8; }
